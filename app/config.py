@@ -1,4 +1,3 @@
-from math import e
 from pydantic_settings import BaseSettings
 
 
