@@ -6,7 +6,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    # 1️⃣ Ephemeral Postgres for the job
     services:
       postgres:
         image: postgres:15
@@ -22,7 +21,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    # 2️⃣ Env vars your Settings class expects
     env:
       DATABASE_HOSTNAME: localhost
       DATABASE_PORT: 5432
@@ -46,9 +44,28 @@ jobs:
           pip install -r requirements.txt
           pip install psycopg2-binary pytest
 
-      # Optional: run Alembic or your own init script
       - name: Run migrations
         run: alembic upgrade head
 
       - name: Run tests
         run: pytest -q
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: ./
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/fastapidoc:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
